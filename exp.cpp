@@ -8,6 +8,8 @@
 #include <gmpxx.h>
 #include <gmp.h>
 #include <cmath>
+#include <chrono>
+
 
 void compute_partial_sum(mpf_t sum, int start, int end)
 {
@@ -43,27 +45,26 @@ int main(int argc, char **argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    int precision = (argc > 1) ? std::stoi(argv[1]) : 20;
-    mpf_set_default_prec(1000);
+    int precision = std::stoi(argv[1]);
     int terms = 1;
 
     double kek = 0;
     while (kek < precision)
     {
         kek += log10(terms);
-        terms *= 2;
+        terms++;
     }
+    terms *= 2;
 
     int start = rank * terms / size;
     int end = rank + 1 == size ? terms : start + terms / size;
+    mpf_set_default_prec(10*static_cast<int>(std::ceil(precision*std::log2(10))));
 
     if (rank == 0)
     {
+        auto startTime = std::chrono::steady_clock::now();
         std::vector<mpf_t> received_sums(size-1);
-        std::for_each(received_sums.begin(), received_sums.end(), [precision](auto& data)
-        {
-            mpf_init(data);
-        });
+        std::for_each(received_sums.begin(), received_sums.end(), mpf_init);
         std::vector<MPI_Request> recv_requests(4*(size - 1));
         for (int i = 0; i < size - 1; ++i)
         {
@@ -101,12 +102,11 @@ int main(int argc, char **argv)
             
             MPI_Status status;
             MPI_Wait(&recv_requests[i*4+1], &status);
-
-            received_sums[i]->_mp_d = (mp_limb_t*) calloc(received_sums[i]->_mp_size, sizeof(mp_limb_t));
+            received_sums[i]->_mp_d = (mp_limb_t*) calloc(abs(received_sums[i]->_mp_size), sizeof(mp_limb_t));
 
             MPI_Irecv(
                 received_sums[i]->_mp_d,
-                sizeof(mp_limb_t)*received_sums[i]->_mp_size / sizeof(char),
+                sizeof(mp_limb_t)*abs(received_sums[i]->_mp_size) / sizeof(char),
                 MPI_CHAR,
                 sender_rank,
                 4*sender_rank + 3,
@@ -129,8 +129,10 @@ int main(int argc, char **argv)
         {
             mpf_add(sum, sum, pSum);
         }
-        gmp_printf("%.*Ff\n", precision, sum);
+        gmp_printf("%.Ff\n", sum);
         mpf_clear(sum);
+        auto endTime = std::chrono::steady_clock::now();
+        std::cout << "Elapsed time in seconds: " << std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count()<< " sec";
     }
     else
     {
@@ -149,9 +151,8 @@ int main(int argc, char **argv)
             MPI_COMM_WORLD,
             &requests[0]);
         
-        int abs_sz = abs(part_sum->_mp_size);
         MPI_Isend(
-            &abs_sz,
+            &part_sum->_mp_size,
             sizeof(int) / sizeof(char),
             MPI_CHAR,
             0,
@@ -179,7 +180,7 @@ int main(int argc, char **argv)
             MPI_COMM_WORLD,
             &requests[3]);
 
-        MPI_Waitall( 4, requests.data(), statuses.data());
+        MPI_Waitall(4, requests.data(), statuses.data());
         mpf_clear(part_sum);
     }
 
