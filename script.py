@@ -15,14 +15,3 @@ with open('input_data.txt', 'w') as f:
         f.write(f"{num} ")
 
 print(f"Сгенерирован файл input_data.txt с {NUM_ELEMENTS} случайными числами")
-
-# Сортировка данных
-sorted_data = sorted(random_data)
-
-# Запись в файл
-with open('sorted_data.txt', 'w') as f:
-    f.write(f"{NUM_ELEMENTS} ")  # Первая строка - количество элементов
-    for num in sorted_data:
-        f.write(f"{num} ")
-
-print(f"Сгенерирован файл sorted_data.txt с отсортированными числами")

@@ -36,15 +36,15 @@ int main(int argc, char** argv) {
     auto end = chrono::steady_clock::now();
 
     int rank, pCount, dataLen;
+    std::vector<int> delimeters;
     std::vector<int> pData;
 
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &pCount);
 
-    std::vector<int> delimeters;
-    
     if (rank == 0)
     {
+        std::cout << "There is " << pCount << " executors" << std::endl;
         if (argc < 2) {
             std::cerr << "Usage: " << argv[0] << " <input_file>" << std::endl;
             MPI_Abort(MPI_COMM_WORLD, 1);
@@ -159,17 +159,20 @@ int main(int argc, char** argv) {
         std::copy(sample.begin(), sample.end(), data.begin());
 
         int offset = lenghts[0];
+        std::vector<MPI_Request> resReqs(pCount-1);
         for (int i = 1; i < pCount; i++)
         {
-            MPI_Recv(data.data()+offset, lenghts[i], MPI_INT, i, i, MPI_COMM_WORLD, MPI_STATUSES_IGNORE);
+            MPI_Irecv(data.data()+offset, lenghts[i], MPI_INT, i, i, MPI_COMM_WORLD, &resReqs[i-1]);
             offset += lenghts[i];
         }
+        MPI_Waitall(resReqs.size(), resReqs.data(), MPI_STATUSES_IGNORE);
 
         end = chrono::steady_clock::now();
         std::cout << "Elapsed time in microseconds: " << chrono::duration_cast<chrono::microseconds>(end - start).count()<< " µs" << endl;
 
         std::vector<int> correctData(data.size());
         std::copy(data.begin(), data.end(), correctData.begin());
+        std::sort(correctData.begin(), correctData.end());
 
         bool valid = true;
         for(int i = 0; i < data.size(); i++)
@@ -190,10 +193,12 @@ int main(int argc, char** argv) {
     }
     else
     {
+        MPI_Request resReq;
         MPI_Send(&sampleLen, 1, MPI_INT, 0, rank, MPI_COMM_WORLD);
-        MPI_Send(sample.data(), sampleLen, MPI_INT, 0, rank, MPI_COMM_WORLD);
+        MPI_Isend(sample.data(), sampleLen, MPI_INT, 0, rank, MPI_COMM_WORLD, &resReq);
+        MPI_Wait(&resReq, MPI_STATUSES_IGNORE);
     }
-    MPI_Barrier(MPI_COMM_WORLD);
+
     MPI_Finalize();
     return 0;
 }
