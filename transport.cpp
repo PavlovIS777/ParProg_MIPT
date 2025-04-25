@@ -3,24 +3,32 @@
 #include <cmath>
 #include <chrono>
 #include <vector>
+#include <fstream>
 
-
-double phi(double x) {
-    return 0;
-}
-
-double psi(double t) {
-    return 10;
-}
-
-double f(double x, double t) {
-    return (x < 1e-5) ? 10 : 0;
-}
-
-int main(int argc, char** argv) {    
-    if (argc < 2) {
-        return 0;
+void saveToFile(const std::vector<std::vector<double>>& data, const std::string& filename) {
+    std::ofstream out(filename);
+    if (!out.is_open()) {
+        throw std::runtime_error("Failed to open file: " + filename);
     }
+
+    for (const auto& row : data) {
+        for (size_t i = 0; i < row.size(); ++i) {
+            out << row[i];
+            if (i + 1 < row.size()) out << ' ';
+        }
+        out << '\n';
+    }
+    out.close();
+}
+
+double phi(double x) { return std::sin(10 * M_PI * x); }
+double psi(double t) { return 0; }
+double f(double x, double t) { return 0; }
+
+int main(int argc, char** argv) {
+    if (argc < 6) return 0;
+
+    auto start = std::chrono::high_resolution_clock::now();
 
     int K = std::stoi(argv[1]);
     int M = std::stoi(argv[2]);
@@ -28,56 +36,54 @@ int main(int argc, char** argv) {
     double T = std::stod(argv[4]);
     double a = std::stod(argv[5]);
 
-    double h = X/(M-1);
-    double tau = T/(K-1);
-    
+    double h = X / (M - 1);
+    double tau = T / (K - 1);
+
+    int dataSize = M + 2; // 2 призрачных слоя
+
     std::vector<std::vector<double>> result;
-    std::vector<double> u_prev(M+2);
-    std::vector<double> u_curr(M+2);
-    std::vector<double> u_next(M+2);
+    std::vector<double> u_prev(dataSize), u_curr(dataSize), u_next(dataSize);
 
-    // Начальный конфиг
-    for (int m = 0; m < M+1; m++)
-    {
-        u_prev[m] = phi(m*h);
+    // начальное условие
+    for (int m = 0; m < M; ++m) {
+        u_prev[m + 1] = phi(m * h);
     }
 
-    u_prev[0] = psi(tau*0);
-    u_curr[0] = psi(tau*1);
+    // граничные условия на первом слое
+    u_prev[0] = psi(0);
+    u_prev[M + 1] = 3 * u_prev[M] - 3 * u_prev[M - 1] + u_prev[M - 2];
 
-    u_prev[M+1] = 3*u_prev[M] - 3*u_prev[M-1] + u_prev[M-2];
-    result.push_back(std::vector<double>(u_prev.begin(), u_prev.end()-1));
+    // граничные условия на втором слое
+    u_curr[0] = psi(tau);
 
-    for (int m = 1; m < M+2; m++)
-    {
-        u_curr[m] = u_prev[m] - a * (tau/h) * (u_prev[m+1] + u_prev[m-1]) + 2*tau * f(h*m, 0);
+    // шаг 1: t = tau
+    for (int m = 1; m <= M; ++m) {
+        u_curr[m] = u_prev[m] - a * (tau / h) * (u_prev[m + 1] - u_prev[m - 1]) + 2 * tau * f((m - 1) * h, 0);
     }
-    u_curr[M+1] = 3*u_curr[M] - 3*u_curr[M-1] + u_curr[M-2];
+    u_curr[M + 1] = 3 * u_curr[M] - 3 * u_curr[M - 1] + u_curr[M - 2];
 
-    result.push_back(std::vector<double>(u_curr.begin(), u_curr.end()-1));
+    result.push_back(std::vector<double>(u_prev.begin() + 1, u_prev.end() - 1));
+    result.push_back(std::vector<double>(u_curr.begin() + 1, u_curr.end() - 1));
 
-    for (int k = 2; k < K+1; k++)
-    {
-        u_next[0] = psi(k*tau);
-        for (int m = 1; m < M+2; m++)
-        {
-            u_next[m] = u_prev[m] - a * (tau/h)*(u_curr[m+1]-u_curr[m-1]) + 2*tau*f(m*h, k*tau);
+    // остальные временные слои
+    for (int k = 2; k <= K; ++k) {
+        u_next[0] = psi(k * tau);
+        for (int m = 1; m <= M; ++m) {
+            u_next[m] = u_prev[m] - a * (tau / h) * (u_curr[m + 1] - u_curr[m - 1]) + 2 * tau * f((m - 1) * h, k * tau);
         }
-        u_next[M+1] = 3*u_next[M] - 3*u_next[M-1] + u_next[M-2];
-        result.push_back(std::vector<double>(u_next.begin(), u_next.end()-1));
+        u_next[M + 1] = 3 * u_next[M] - 3 * u_next[M - 1] + u_next[M - 2];
+
+        result.push_back(std::vector<double>(u_next.begin() + 1, u_next.end() - 1));
 
         u_prev = u_curr;
         u_curr = u_next;
     }
 
-    for (auto& tLayer : result)
-    {
-        for (int i = 0; i < tLayer.size() - 1; i++)
-        {
-            std::cout << tLayer[i] << " "; 
-        }
-        std::cout << tLayer.back() << "\n";
-    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    std::cout << "Elapsed time: " << duration.count() << " seconds" << std::endl;
+
+    saveToFile(result, "out.txt");
 
     return 0;
 }

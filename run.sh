@@ -5,6 +5,5 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --job-name=PIvan
 #SBATCH --comment="Run student mpi from config"
-#SBATCH --output=out.txt
-#SBATCH --error=error.txt
+#SBATCH --output=complete.txt
 mpirun ./a.out "$@"
