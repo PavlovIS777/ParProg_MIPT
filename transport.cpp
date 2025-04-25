@@ -5,18 +5,16 @@
 #include <vector>
 
 
-double phi(double x)
-{
+double phi(double x) {
     return 0;
 }
 
-double psi(double t)
-{
-    return 0;
+double psi(double t) {
+    return 10;
 }
-double f(double x, double t)
-{
-    return 100;
+
+double f(double x, double t) {
+    return (x < 1e-5) ? 10 : 0;
 }
 
 int main(int argc, char** argv) {    
@@ -30,15 +28,8 @@ int main(int argc, char** argv) {
     double T = std::stod(argv[4]);
     double a = std::stod(argv[5]);
 
-    double h = X/M;
-    double tau = T/K;
-    double r = a*a * tau / (h*h);
-
-    if (r > 0.5)
-    {
-        std::cout << "не устойчива";
-        return 0;
-    }
+    double h = X/(M-1);
+    double tau = T/(K-1);
     
     std::vector<std::vector<double>> result;
     std::vector<double> u_prev(M+2);
@@ -59,7 +50,7 @@ int main(int argc, char** argv) {
 
     for (int m = 1; m < M+2; m++)
     {
-        u_curr[m] = u_prev[m] - tau * (u_prev[m+1] + u_prev[m-1])/h + 2*tau * f(h*m, 0);
+        u_curr[m] = u_prev[m] - a * (tau/h) * (u_prev[m+1] + u_prev[m-1]) + 2*tau * f(h*m, 0);
     }
     u_curr[M+1] = 3*u_curr[M] - 3*u_curr[M-1] + u_curr[M-2];
 
@@ -70,7 +61,7 @@ int main(int argc, char** argv) {
         u_next[0] = psi(k*tau);
         for (int m = 1; m < M+2; m++)
         {
-            u_next[m] = u_prev[m] - tau*((u_curr[m+1]-u_curr[m-1])/h - 2*f(m*h, k*tau));
+            u_next[m] = u_prev[m] - a * (tau/h)*(u_curr[m+1]-u_curr[m-1]) + 2*tau*f(m*h, k*tau);
         }
         u_next[M+1] = 3*u_next[M] - 3*u_next[M-1] + u_next[M-2];
         result.push_back(std::vector<double>(u_next.begin(), u_next.end()-1));
