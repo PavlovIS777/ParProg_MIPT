@@ -1,1 +1,0 @@
-# ParProg_MIPT
