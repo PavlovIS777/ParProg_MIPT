@@ -31,17 +31,17 @@ double psi(double t) { return std::exp(-t); }
 double f(double x, double t) { return x+t; }
 
 int main(int argc, char *argv[]) {
-    if (argc < 6) return 0;
+    if (argc < 7) return 0;
     auto start = std::chrono::high_resolution_clock::now();
-    int K = std::stoi(argv[1]);
-    int M = std::stoi(argv[2]);
-    double X = std::stod(argv[3]);
-    double T = std::stod(argv[4]);
-    double a = std::stod(argv[5]);
+    int K = std::stoi(argv[2]);
+    int M = std::stoi(argv[3]);
+    double X = std::stod(argv[4]);
+    double T = std::stod(argv[5]);
+    double a = std::stod(argv[6]);
 
     bool write = false;
-    if (argc >= 7)
-        write = std::stoi(argv[6]);
+    if (argc >= 8)
+        write = static_cast<bool>(std::stoi(argv[7]));
 
     double h = X / (M - 1);
     double tau = T / (K - 1);
