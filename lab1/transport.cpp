@@ -27,14 +27,16 @@ double f(double x, double t) { return x+t; }
 
 int main(int argc, char** argv) {
     if (argc < 6) return 0;
-
     auto start = std::chrono::high_resolution_clock::now();
-
     int K = std::stoi(argv[1]);
     int M = std::stoi(argv[2]);
     double X = std::stod(argv[3]);
     double T = std::stod(argv[4]);
     double a = std::stod(argv[5]);
+
+    bool write = false;
+    if (argc >= 7)
+        write = static_cast<bool>(std::stoi(argv[6]));
 
     double h = X / (M - 1);
     double tau = T / (K - 1);
@@ -71,8 +73,9 @@ int main(int argc, char** argv) {
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
     std::cout << "Elapsed time: " << duration.count() << " seconds" << std::endl;
-
-    saveToFile(result, "out" + std::to_string(K) + std::to_string(M) + ".txt");
+    
+    if (write)
+        saveToFile(result, "out" + std::to_string(K) + std::to_string(M) + ".txt");
 
     return 0;
 }
