@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
 
         if (valid)
         {
-            std::cout << "Массивы отсортирован корретно!" << std::endl;
+            std::cout << "Массивы отсортирован корректно!" << std::endl;
         }
         
     }
