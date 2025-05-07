@@ -34,7 +34,7 @@ for i in "${!PARAMETERS[@]}"; do
     echo "=== Запуск $((i+1)): $PROGRAM ${PARAMETERS[$i]} ===" >> "$OUTPUT_FILE"
     echo "Время начала: $(date)" >> "$OUTPUT_FILE"
 
-    $PROGRAM ${PARAMETERS[$i]} >> "$OUTPUT_FILE" 2>&1
+    ../run.sh $PROGRAM ${PARAMETERS[$i]} >> "$OUTPUT_FILE" 2>&1
 
     echo "=== Завершено: $(date) ===" >> "$OUTPUT_FILE"
     echo -e "\n" >> "$OUTPUT_FILE"
