@@ -1,9 +1,9 @@
 import random
 
 # Параметры генерации
-NUM_ELEMENTS = 5000000  # 1 миллион элементов
-MIN_VAL = -1000000
-MAX_VAL = 1000000
+NUM_ELEMENTS = 10000000  # 1 миллион элементов
+MIN_VAL = -100000
+MAX_VAL = 100000
 
 # Генерация случайного массива
 random_data = [random.randint(MIN_VAL, MAX_VAL) for _ in range(NUM_ELEMENTS)]
