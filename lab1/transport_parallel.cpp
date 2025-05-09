@@ -4,8 +4,11 @@
 #include <fstream>
 #include <mpi.h>
 #include <chrono>
+#include <string>
+#include <numbers>
 
-double phi(double x) { return std::cos(M_PI * x); }
+
+double phi(double x) { return std::cos(std::numbers::pi * x); }
 double psi(double t) { return std::exp(-t); }
 double f(double x, double t) { return x + t; }
 
@@ -20,23 +23,24 @@ void saveToFile(const std::vector<std::vector<double>> &data, const std::string 
 
 int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
+
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    if (argc < 7) {
+    if (argc < 6) {
         if (rank == 0)
-            std::cerr << "Usage: ./a.out <K> <M> <X> <T> <a> <write=0|1>\n";
+            std::cerr << "Usage: <K> <M> <X> <T> <a> <write=0|1>\n";
         MPI_Finalize();
         return 1;
     }
 
-    int K = std::stoi(argv[2]);
-    int M = std::stoi(argv[3]);
-    double X = std::stod(argv[4]);
-    double T = std::stod(argv[5]);
-    double a = std::stod(argv[6]);
-    bool write = argc >= 8 ? std::stoi(argv[7]) : false;
+    int K = std::stoi(argv[1]);
+    int M = std::stoi(argv[2]);
+    double X = std::stod(argv[3]);
+    double T = std::stod(argv[4]);
+    double a = std::stod(argv[5]);
+    bool write = argc >= 7 ? std::stoi(argv[6]) : false;
 
     double h = X / (M - 1);
     double tau = T / (K - 1);
@@ -87,56 +91,58 @@ int main(int argc, char *argv[]) {
 
     // Сбор данных
     {
+        std::vector<int> local_sizes(size);
+        for (int r = 0; r < size; ++r) {
+            local_sizes[r] = (base + (r < extra ? 1 : 0)) * (K + 1);
+        }
+        int local_size = local_sizes[rank];
+        
         std::vector<double> sendbuf;
-        for (int k = 0; k <= K; ++k)
+        sendbuf.reserve(local_size);
+        for (int k = 0; k <= K; ++k) {
             sendbuf.insert(sendbuf.end(), local_result[k].begin(), local_result[k].end());
-
-        int local_size = local_n * (K + 1);
+        }
 
         std::vector<double> recvbuf;
-        std::vector<int> recvcounts, displs;
+        std::vector<int> displs(size);
 
         if (rank == 0) {
-            recvbuf.resize((M) * (K + 1));
-
-            recvcounts.resize(size);
-            displs.resize(size);
-
-            for (int r = 0; r < size; ++r) {
-                int local_r = base + (r < extra ? 1 : 0);
-                recvcounts[r] = local_r * (K + 1);
-                displs[r] = (r == 0 ? 0 : displs[r - 1] + recvcounts[r - 1]);
+            displs[0] = 0;
+            for (int r = 1; r < size; ++r) {
+                displs[r] = displs[r-1] + local_sizes[r-1];
             }
+            int total_size = displs.back() + local_sizes.back();
+            recvbuf.resize(total_size);
         }
 
         MPI_Gatherv(sendbuf.data(), local_size, MPI_DOUBLE,
-                    recvbuf.data(), recvcounts.data(), displs.data(), MPI_DOUBLE,
+                    recvbuf.data(), local_sizes.data(), displs.data(), MPI_DOUBLE,
                     0, MPI_COMM_WORLD);
 
         if (rank == 0) {
             std::vector<std::vector<double>> full(K + 1, std::vector<double>(M));
-
-            for (int r = 0, pos = 0; r < size; ++r) {
-                int local_r = base + (r < extra ? 1 : 0);
-                for (int k = 0; k <= K; ++k) {
-                    for (int j = 0; j < local_r; ++j) {
-                        full[k][r * base + std::min(r, extra) + j] = recvbuf[pos++];
-                    }
+            for (int k = 0; k <= K; ++k) {
+                for (int r = 0; r < size; ++r) {
+                    int local_r = base + (r < extra ? 1 : 0);
+                    int src_offset = displs[r] + k * local_r;
+                    int dest_offset = r * base + std::min(r, extra);
+                    
+                    std::copy(&recvbuf[src_offset], &recvbuf[src_offset] + local_r,
+                            &full[k][dest_offset]);
                 }
             }
 
             auto end_time = std::chrono::high_resolution_clock::now();
             duration = end_time - start_time;
 
-            if (write)
+            if (write) {
                 saveToFile(full, "out" + std::to_string(K) + std::to_string(M) + "_p.txt");
+            }
         }
 
-        // std::cout << "Elapsed calculation time for rank: " << rank+1 << " - " << calc_duration.count() << " seconds\n";
-        // MPI_Barrier(MPI_COMM_WORLD);
-        if(rank == 0)
-        {
-            std::cout << "Elapsed time: " << duration.count() << " seconds\n";
+        std::cout << "Elapsed calculation time for rank: " << rank+1 << " - " << calc_duration.count() << " seconds\n";
+        if (rank == 0) {
+            std::cout << "Total elapsed time: " << duration.count() << " seconds\n";
         }
     }
     MPI_Finalize();

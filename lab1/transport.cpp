@@ -4,6 +4,8 @@
 #include <chrono>
 #include <vector>
 #include <fstream>
+#include <numbers>
+
 
 void saveToFile(const std::vector<std::vector<double>>& data, const std::string& filename) {
     std::ofstream out(filename);
@@ -21,7 +23,7 @@ void saveToFile(const std::vector<std::vector<double>>& data, const std::string&
     out.close();
 }
 
-double phi(double x) { return std::cos(M_PI*x); }
+double phi(double x) { return std::cos(std::numbers::pi*x); }
 double psi(double t) { return std::exp(-t); }
 double f(double x, double t) { return x+t; }
 

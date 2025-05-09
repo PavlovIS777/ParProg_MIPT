@@ -1,0 +1,95 @@
+===== Test with parameters: 50000 2000 1 1 1 ===== 
+Elapsed time: 0.814617 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 3000 1 1 1 ===== 
+Elapsed time: 1.20415 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 4000 1 1 1 ===== 
+Elapsed time: 1.65254 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 5000 1 1 1 ===== 
+Elapsed time: 2.04243 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 6000 1 1 1 ===== 
+Elapsed time: 2.55508 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 7000 1 1 1 ===== 
+Elapsed time: 2.9659 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 8000 1 1 1 ===== 
+Elapsed time: 3.43504 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 9000 1 1 1 ===== 
+Elapsed time: 3.8441 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 10000 1 1 1 ===== 
+Elapsed time: 4.26877 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 12000 1 1 1 ===== 
+Elapsed time: 5.14945 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 14000 1 1 1 ===== 
+Elapsed time: 5.99851 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 16000 1 1 1 ===== 
+Elapsed time: 6.86428 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 18000 1 1 1 ===== 
+Elapsed time: 7.81633 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 20000 1 1 1 ===== 
+Elapsed time: 8.62333 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 24000 1 1 1 ===== 
+Elapsed time: 10.1365 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 28000 1 1 1 ===== 
+Elapsed time: 11.7558 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 32000 1 1 1 ===== 
+Elapsed time: 13.3606 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 35000 1 1 1 ===== 
+Elapsed time: 14.5068 seconds
+ 
+===== End of test ===== 
+ 
+===== Test with parameters: 50000 40000 1 1 1 ===== 
+Elapsed time: 16.8598 seconds
+ 
+===== End of test ===== 
+ 
