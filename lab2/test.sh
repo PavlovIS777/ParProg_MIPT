@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Конфигурация
-EPS="1e-5"
+EPS="1e-6"
 THREADS_LIST=(1 2 4 8 12)
 EXECUTABLE="./a.out"
 LOGFILE="integration_benchmark.log"
@@ -20,7 +20,7 @@ for THREADS in "${THREADS_LIST[@]}"; do
 
     # Замер времени выполнения
     START=$(date +%s.%N)
-    $EXECUTABLE "$THREADS" "$EPS" "0.02:6.0" > /dev/null
+    $EXECUTABLE "$THREADS" "$EPS" "0.02" "6.0" > /dev/null
     END=$(date +%s.%N)
 
     # Расчёт времени

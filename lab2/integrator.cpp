@@ -1,113 +1,115 @@
 #include <iostream>
-#include <gmp.h>
-#include <gmpxx.h>
 #include <pthread.h>
-#include <cstring>
-#include <cstdlib>
-#include <ctime>
-#include <cmath>
 #include <mpfr.h>
-
+#include <vector>
+#include <cmath>
 
 struct ThreadData {
-    mpf_class start;
-    mpf_class end;
-    mpf_class precision;
-    mpf_class result;
+    mpfr_t a, h, sum, eps;
+    long start, end;
+    mpfr_prec_t prec;
+    mpfr_rnd_t rnd;
 };
 
-void f_mpfr(mpf_class& result, const mpf_class& x, mpfr_rnd_t rnd = MPFR_RNDN) {
-    if (sgn(x) == 0) {
-        result = 0;
-        return;
-    }
-
-    mpfr_t x_mpfr, cos_x, x_squared;
-    mpfr_inits2(256, x_mpfr, cos_x, x_squared, (mpfr_ptr) 0);
-
-    mpfr_set_f(x_mpfr, x.get_mpf_t(), rnd);         // x → mpfr
-    mpfr_cos(cos_x, x_mpfr, rnd);                   // cos(x)
-    mpfr_mul(x_squared, x_mpfr, x_mpfr, rnd);       // x^2
-    mpfr_div(cos_x, cos_x, x_squared, rnd);         // cos(x)/x^2
-
-    mpf_set(result.get_mpf_t(), cos_x);             // convert back to mpf_class
-
-    mpfr_clears(x_mpfr, cos_x, x_squared, (mpfr_ptr) 0);
-}
-
-
-void compute_integral_segment(ThreadData* data) {
-    mpf_class x = data->start;
-    mpf_class step = data->precision;
-    mpf_class sum = 0;
-
-    while ( x < data->end) {
-        mpf_class fx;
-        f_mpfr(fx, x);
-        sum += fx * step;
-    }
-
-    data->result = sum;
-}
-
-void* thread_function(void* arg) {
+void* integrate_thread(void* arg) {
     ThreadData* data = (ThreadData*)arg;
-    compute_integral_segment(data);
+
+    mpfr_t xi, fx, temp;
+    mpfr_inits2(data->prec, xi, fx, temp, nullptr);
+    
+    for (long i = data->start; i < data->end; ++i) {
+        mpfr_set_si(temp, 2 * i + 1, data->rnd);       // temp = 2i + 1
+        mpfr_mul(xi, data->h, temp, data->rnd);        // xi = h * (2i + 1)
+        mpfr_div_si(xi, xi, 2, data->rnd);             // xi = h * (2i + 1) / 2
+        mpfr_add(xi, data->a, xi, data->rnd);          // xi = a + h*(2i+1)/2
+
+        mpfr_cos(fx, xi, data->rnd);                   // fx = cos(xi)
+        mpfr_mul(temp, xi, xi, data->rnd);             // temp = xi^2
+        mpfr_div(fx, fx, temp, data->rnd);             // fx = cos(xi)/xi^2
+
+        mpfr_add(data->sum, data->sum, fx, data->rnd); // sum += fx
+    }
+
+    mpfr_clears(xi, fx, temp, nullptr);
     return nullptr;
 }
 
-int main(int argc, char** argv) {
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <num_threads> <precision> <start:end>\n";
+int main(int argc, char* argv[]) {
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " <num_threads> <eps> <a> <b>\n";
         return 1;
     }
 
     int num_threads = std::stoi(argv[1]);
-    mpf_class precision(argv[2]);
+    double eps_d = std::stod(argv[2]);
+    double a_d = std::stod(argv[3]);
+    double b_d = std::stod(argv[4]);
 
-    char* range_str = argv[3];
-    char* colon = strchr(range_str, ':');
-    if (!colon) {
-        std::cerr << "Invalid range format. Use start:end\n";
+    if (a_d <= 0.0) {
+        std::cerr << "Error: a must be > 0 to avoid division by zero\n";
         return 1;
     }
 
-    *colon = '\0';
-    mpf_class range_start(range_str);
-    mpf_class range_end(colon + 1);
+    mpfr_prec_t prec = 256;
+    mpfr_rnd_t rnd = MPFR_RNDN;
 
-    // Calculate interval length
-    mpf_class total_length = range_end - range_start;
-    mpf_class thread_length = total_length / num_threads;
+    mpfr_t a, b, eps, prev_result, result, h, diff, temp;
+    mpfr_inits2(prec, a, b, eps, prev_result, result, h, diff, temp, nullptr);
 
-    pthread_t* threads = new pthread_t[num_threads];
-    ThreadData* thread_data = new ThreadData[num_threads];
+    mpfr_set_d(a, a_d, rnd);
+    mpfr_set_d(b, b_d, rnd);
+    mpfr_set_d(eps, eps_d, rnd);
 
-    clock_t start_time = clock();
+    long n = 1000;
+    bool converged = false;
 
-    for (int i = 0; i < num_threads; ++i) {
-        thread_data[i].start = range_start + i * thread_length;
-        thread_data[i].end = (i == num_threads - 1) ? range_end : (range_start + (i + 1) * thread_length);
-        thread_data[i].precision = precision / num_threads;
-        pthread_create(&threads[i], nullptr, thread_function, &thread_data[i]);
+    while (!converged) {
+        mpfr_set_ui(result, 0, rnd);
+        mpfr_sub(temp, b, a, rnd); // temp = b - a
+        mpfr_div_si(h, temp, n, rnd); // h = (b - a) / n
+
+        std::vector<pthread_t> threads(num_threads);
+        std::vector<ThreadData> data(num_threads);
+
+        long chunk = n / num_threads;
+
+        for (int i = 0; i < num_threads; ++i) {
+            data[i].start = i * chunk;
+            data[i].end = (i == num_threads - 1) ? n : (i + 1) * chunk;
+            data[i].prec = prec;
+            data[i].rnd = rnd;
+
+            mpfr_inits2(prec, data[i].a, data[i].h, data[i].sum, data[i].eps, nullptr);
+            mpfr_set(data[i].a, a, rnd);
+            mpfr_set(data[i].h, h, rnd);
+            mpfr_set_ui(data[i].sum, 0, rnd);
+            mpfr_set(data[i].eps, eps, rnd);
+
+            pthread_create(&threads[i], nullptr, integrate_thread, &data[i]);
+        }
+
+        for (int i = 0; i < num_threads; ++i) {
+            pthread_join(threads[i], nullptr);
+            mpfr_add(result, result, data[i].sum, rnd);
+            mpfr_clears(data[i].a, data[i].h, data[i].sum, data[i].eps, nullptr);
+        }
+
+        mpfr_mul(result, result, h, rnd); // result *= h
+
+        mpfr_sub(diff, result, prev_result, rnd);
+        mpfr_abs(diff, diff, rnd);
+        if (mpfr_cmp(diff, eps) < 0)
+            converged = true;
+        else {
+            mpfr_set(prev_result, result, rnd);
+            n *= 2;
+        }
     }
 
-    mpf_class total_result = 0;
+    std::cout << "Integral of cos(x)/x^2 from " << a_d << " to " << b_d << " ≈ ";
+    mpfr_out_str(stdout, 10, 50, result, rnd);
+    std::cout << std::endl;
 
-    for (int i = 0; i < num_threads; ++i) {
-        pthread_join(threads[i], nullptr);
-        total_result += thread_data[i].result;
-    }
-
-    clock_t end_time = clock();
-    double elapsed_secs = double(end_time - start_time) / CLOCKS_PER_SEC;
-
-    std::cout.precision(20);
-    std::cout << "Result: " << total_result << "\n";
-    std::cout << "Time: " << elapsed_secs << " s\n";
-
-    delete[] threads;
-    delete[] thread_data;
-
+    mpfr_clears(a, b, eps, prev_result, result, h, diff, temp, nullptr);
     return 0;
 }
