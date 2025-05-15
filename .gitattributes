@@ -1,0 +1,2 @@
+lab1/out_s.txt filter=lfs diff=lfs merge=lfs -text
+lab1/out_p.txt filter=lfs diff=lfs merge=lfs -text
