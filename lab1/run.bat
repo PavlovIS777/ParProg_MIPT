@@ -1,8 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
-set EXE=transport_parallel.exe
-set PARAM=50000 12000 1 1 1 0
+set EXE=transport.exe
+set PARAM=5000 1200 1 1 1 1
 set MPI_PROCESSES=4
 
 echo ===== Running with parameters: !PARAM! ===

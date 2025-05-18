@@ -9,7 +9,7 @@ if errorlevel 1 (
     exit /b 1
 )
 ::_parallel
-set filename=transport_parallel
+set filename=transport
 :: Имя исходного файла (замените на ваше)
 set SOURCE_FILE=%filename%.cpp
 :: Имя выходного исполняемого файла
